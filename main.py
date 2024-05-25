@@ -49,8 +49,7 @@ def main():
                 logging.error(error_message)
                 return jsonify(error=error_message), 400
 
-            #dataset_path = create_dataset(theme, oracle, student_model, condition, question_example, answer_example)
-            dataset_path = wait_10_seconds()
+            dataset_path = create_dataset(theme, oracle, student_model, condition, question_example, answer_example)
             response_message = f"Dataset created successfully at {dataset_path}"
             logging.info("Response: %s", response_message)
             return jsonify(message=response_message)

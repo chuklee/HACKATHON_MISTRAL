@@ -1,187 +1,148 @@
-# flake8: noqa
-# Copyright 2023 The HuggingFace Inc. team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-"""
-# regular:
-python examples/scripts/dpo.py \
-    --dataset_name=trl-internal-testing/hh-rlhf-helpful-base-trl-style \
-    --model_name_or_path=gpt2 \
-    --per_device_train_batch_size 4 \
-    --learning_rate 1e-3 \
-    --gradient_accumulation_steps 1 \
-    --logging_steps 10 \
-    --eval_steps 500 \
-    --output_dir="dpo_anthropic_hh" \
-    --warmup_steps 150 \
-    --report_to wandb \
-    --bf16 \
-    --logging_first_step \
-    --no_remove_unused_columns
-
-# peft:
-python examples/scripts/dpo.py \
-    --dataset_name=trl-internal-testing/hh-rlhf-helpful-base-trl-style \
-    --model_name_or_path=gpt2 \
-    --per_device_train_batch_size 4 \
-    --learning_rate 1e-3 \
-    --gradient_accumulation_steps 1 \
-    --logging_steps 10 \
-    --eval_steps 500 \
-    --output_dir="dpo_anthropic_hh" \
-    --optim rmsprop \
-    --warmup_steps 150 \
-    --report_to wandb \
-    --bf16 \
-    --logging_first_step \
-    --no_remove_unused_columns \
-    --use_peft \
-    --lora_r=16 \
-    --lora_alpha=16
-"""
-
-import logging
-import multiprocessing
-import os
-from contextlib import nullcontext
-
-TRL_USE_RICH = os.environ.get("TRL_USE_RICH", False)
-
-from trl.commands.cli_utils import DPOScriptArguments, init_zero_verbose, TrlParser
-
-if TRL_USE_RICH:
-    init_zero_verbose()
-    FORMAT = "%(message)s"
-
-    from rich.console import Console
-    from rich.logging import RichHandler
-
 import torch
 from datasets import load_dataset
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
-from trl import (
-    DPOConfig,
-    DPOTrainer,
-    ModelConfig,
-    RichProgressCallback,
-    get_kbit_device_map,
-    get_peft_config,
-    get_quantization_config,
-)
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
+from peft import get_peft_model, LoraConfig, TaskType, PeftModel
 
 
-if TRL_USE_RICH:
-    logging.basicConfig(format=FORMAT, datefmt="[%X]", handlers=[RichHandler()], level=logging.INFO)
+from trl import DPOTrainer, AutoModelForCausalLMWithValueHead
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union
+import torch
+import torch.nn as nn
+import gc
+from utils.save_model import save_model_locally
+
+def print_trainable_parameters(model):
+    """
+    Prints the number of trainable parameters in the model.
+    """
+    trainable_params = 0
+    all_param = 0
+    for _, param in model.named_parameters():
+        all_param += param.numel()
+        if param.requires_grad:
+            trainable_params += param.numel()
+    print(
+        f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}"
+    )
 
 
 if __name__ == "__main__":
-    parser = TrlParser((DPOScriptArguments, DPOConfig, ModelConfig))
-    args, training_args, model_config = parser.parse_args_and_config()
-
-    # Force use our print callback
-    if TRL_USE_RICH:
-        training_args.disable_tqdm = True
-        console = Console()
-
+    new_model = "Smol-mistral-7B"
+    hf_token = "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"
     ################
     # Model & Tokenizer
     ################
-    torch_dtype = (
-        model_config.torch_dtype
-        if model_config.torch_dtype in ["auto", None]
-        else getattr(torch, model_config.torch_dtype)
+    model_path = 'mistralai/Mistral-7B-v0.1'
+
+    # LoRA configuration
+    peft_config = LoraConfig(
+        r=16,
+        lora_alpha=16,
+        lora_dropout=0.05,
+        bias="none",
+        task_type="CAUSAL_LM",
+        target_modules=['k_proj', 'gate_proj', 'v_proj', 'up_proj', 'q_proj', 'o_proj', 'down_proj']
     )
-    quantization_config = get_quantization_config(model_config)
-    model_kwargs = dict(
-        revision=model_config.model_revision,
-        trust_remote_code=model_config.trust_remote_code,
-        attn_implementation=model_config.attn_implementation,
-        torch_dtype=torch_dtype,
-        use_cache=False if training_args.gradient_checkpointing else True,
-        device_map=get_kbit_device_map() if quantization_config is not None else None,
-        quantization_config=quantization_config,
-    )
-    model = AutoModelForCausalLM.from_pretrained(model_config.model_name_or_path, **model_kwargs)
-    peft_config = get_peft_config(model_config)
-    if peft_config is None:
-        model_ref = AutoModelForCausalLM.from_pretrained(model_config.model_name_or_path, **model_kwargs)
-    else:
-        model_ref = None
-    tokenizer = AutoTokenizer.from_pretrained(model_config.model_name_or_path)
+
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path, 
+        torch_dtype=torch.float16,
+        )
+
+    model_ref = None
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     if tokenizer.chat_template is None:
         tokenizer.chat_template = "{% for message in messages %}{{message['role'] + ': ' + message['content'] + '\n\n'}}{% endfor %}{{ eos_token }}"
-    if args.ignore_bias_buffers:
-        # torch distributed hack
-        model._ddp_params_and_buffers_to_ignore = [
-            name for name, buffer in model.named_buffers() if buffer.dtype == torch.bool
-        ]
-
-    ################
-    # Optional rich context managers
-    ###############
-    init_context = nullcontext() if not TRL_USE_RICH else console.status("[bold green]Initializing the DPOTrainer...")
-    save_context = (
-        nullcontext()
-        if not TRL_USE_RICH
-        else console.status(f"[bold green]Training completed! Saving the model to {training_args.output_dir}")
-    )
-
     ################
     # Dataset
     ################
-    ds = load_dataset('json', data_files=args.dataset_name, field='data')
-    if args.sanity_check:
-        for key in ds:
-            ds[key] = ds[key].select(range(50))
+    dataset_path = 'dataset_3.json'
+    ds = load_dataset('json', data_files=dataset_path, split="train")
 
-    def process(row):
-        row["chosen"] = tokenizer.apply_chat_template(row["chosen"], tokenize=False)
-        row["rejected"] = tokenizer.apply_chat_template(row["rejected"], tokenize=False)
+    def transform_to_conversation(prompt, response):
+        return [
+            {"role": "user", "content": prompt},
+            {"role": "assistant", "content": response}
+        ]
+
+    def process(row):    
+        chosen_conversation = transform_to_conversation(row["prompt"], row["chosen"])
+        row["chosen"] = tokenizer.apply_chat_template(chosen_conversation, tokenize=False)
+        rejected_conversation = transform_to_conversation(row["prompt"], row["rejected"])
+        row["rejected"] = tokenizer.apply_chat_template(rejected_conversation, tokenize=False)
         return row
 
-    ds = ds.map(
+    train_dataset = ds.map(
         process,
-        num_proc=multiprocessing.cpu_count(),
         load_from_cache_file=False,
     )
-    train_dataset = ds[args.dataset_train_split]
-    eval_dataset = ds[args.dataset_test_split]
 
     ################
     # Training
     ################
-    with init_context:
-        trainer = DPOTrainer(
-            model,
-            model_ref,
-            args=training_args,
-            train_dataset=train_dataset,
-            eval_dataset=eval_dataset,
-            tokenizer=tokenizer,
-            peft_config=get_peft_config(model_config),
-            callbacks=[RichProgressCallback] if TRL_USE_RICH else None,
-        )
 
-    trainer.train()
+    # Training arguments
+    training_args = TrainingArguments(
+        per_device_train_batch_size=4,
+        gradient_accumulation_steps=4,
+        gradient_checkpointing=True,
+        learning_rate=5e-5,
+        lr_scheduler_type="cosine",
+        max_steps=400,
+        save_strategy="no",
+        logging_steps=1,
+        output_dir='dpo_gemma',
+        optim="paged_adamw_32bit",
+        warmup_steps=100,
+        bf16=True,
+        report_to="wandb",
+        remove_unused_columns=False,
+    )
 
-    # Retrieve all difficult examples
-    stats = []
-    for batch in trainer.get_train_dataloader():
-        stats.append(trainer.get_batch_loss_metrics(batch))
-        
+    dpo_trainer = DPOTrainer(
+        model,
+        None,
+        args=training_args,
+        train_dataset=train_dataset,
+        tokenizer=tokenizer,
+        peft_config=peft_config,
+        beta=0.1,
+        max_prompt_length=1024,
+        max_length=1536,
+    )
 
-    with save_context:
-        trainer.save_model(training_args.output_dir)
+    dpo_trainer.train()
+
+    # Save artifacts
+    dpo_trainer.model.save_pretrained("final_checkpoint")
+    tokenizer.save_pretrained("final_checkpoint")
+
+    # Flush memory
+    del dpo_trainer, model
+    gc.collect()
+    torch.cuda.empty_cache()
+
+    # Reload model in FP16 (instead of NF4)
+    base_model = AutoModelForCausalLM.from_pretrained(
+        model_path,
+        return_dict=True,
+        torch_dtype=torch.float16,
+    )
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+
+    # Merge base model with the adapter
+    model = PeftModel.from_pretrained(base_model, "final_checkpoint")
+    model = model.merge_and_unload()
+
+    save_model_locally(model, tokenizer, "./dpo_mistral")
+
+
+    # Save model and tokenizer
+    #model.save_pretrained(new_model)
+    #tokenizer.save_pretrained(new_model)
+
+    # Push them to the HF Hub
+    #model.push_to_hub(new_model, use_temp_dir=False, token=hf_token)
+    #tokenizer.push_to_hub(new_model, use_temp_dir=False, token=hf_token)

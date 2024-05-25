@@ -11,6 +11,7 @@ from logging_config import logger
 from generate_dataset import create_dataset
 from utils.wait_function import wait_10_seconds
 
+from utils.save_model import push_model_to_hugging_face
 app = Flask(__name__)
 
 

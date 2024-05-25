@@ -27,6 +27,7 @@ if st.session_state["show_api_gestion"]:
         GROQ_API_KEY= st.text_input("GROQ API Key")  
         FIREWORKS_API_KEY = st.text_input("FIREWORKS API Key")
         MISTRAL_API_KEY = st.text_input("MISTRAL API Key")
+        HUGGING_FACE_API_KEY = st.text_input("MISTRAL API Key")
         oracles, students = load_models()
         button_submit_key = st.button("Submit API Keys 🔑")
         if button_submit_key:
@@ -38,6 +39,8 @@ if st.session_state["show_api_gestion"]:
                 payload["FIREWORKS_API_KEY"] = FIREWORKS_API_KEY
             if MISTRAL_API_KEY:
                 payload["MISTRAL_API_KEY"] = MISTRAL_API_KEY
+            if HUGGING_FACE_API_KEY:
+                payload["HUGGING_FACE_API_KEY"] = HUGGING_FACE_API_KEY
             if payload:
                 response = requests.post(UPDATE_ENV_ENDPOINT, json=payload)
                 st.success(f"API Keys submitted successfully!")

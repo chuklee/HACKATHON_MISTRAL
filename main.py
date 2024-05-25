@@ -68,5 +68,30 @@ def get_response():
     logging.info("Received GET request at /get_response")
     return "Hello World!"
 
+
+@app.route("/update_env", methods=["POST"])
+def update_env():
+    """
+    Update the environment variables.
+    """
+    data = request.get_json(force=True)
+    logging.info("Received POST request with data: %s", data)
+    if not os.path.exists(".env"):
+        with open(".env", "w", encoding="utf-8") as file:
+            for key, value in data.items():
+                file.write(f"{key}={value}\n")
+    else:
+        # Read the existing environment variables and update the values
+        with open(".env", "r", encoding="utf-8") as file:
+            lines = file.readlines()
+        with open(".env", "w", encoding="utf-8") as file:
+            for line in lines:
+                key, _ = line.split("=")
+                if key in data:
+                    file.write(f"{key}={data[key]}\n")
+                else:
+                    file.write(line)
+    return jsonify(message="Environment variables updated successfully")
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=105, debug=True)

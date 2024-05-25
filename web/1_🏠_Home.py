@@ -32,25 +32,28 @@ with st.container():
     button_train = st.button("Train Model 🚀")
 
 if button_submit_key:
-    if GROQ_API_KEY and FIREWORKS_API_KEY and MISTRAL_API_KEY:
-        api_endpoint = "http://"
-        payload = {
-            "GROQ_API_KEY": GROQ_API_KEY,
-            "FIREWORKS_API_KEY": FIREWORKS_API_KEY,
-            "MISTRAL_API_KEY": MISTRAL_API_KEY
-        }
-        response = requests.post(api_endpoint, json=payload)
+    UPDATE_ENV_ENDPOINT = "http://127.0.0.1:105/update_env"
+    payload = {}
+    if GROQ_API_KEY:
+        payload["GROQ_API_KEY"] = GROQ_API_KEY
+    if FIREWORKS_API_KEY:
+        payload["FIREWORKS_API_KEY"] = FIREWORKS_API_KEY
+    if MISTRAL_API_KEY:
+        payload["MISTRAL_API_KEY"] = MISTRAL_API_KEY
+
+    if payload:
+        response = requests.post(UPDATE_ENV_ENDPOINT, json=payload)
         st.success(f"API Keys submitted successfully!")
 
 if button_train:
     if theme_input and oracle_input and student_model_input:
-        api_endpoint = "http://127.0.0.1:105/create_model"
+        CREATE_MODEL_ENV_ENDPOINT = "http://127.0.0.1:105/create_model"
         payload = {
             "theme": theme_input,
             "oracle": oracle_input,
             "student_model": student_model_input
         }
-        response = requests.post(api_endpoint, json=payload)
+        response = requests.post(CREATE_MODEL_ENV_ENDPOINT, json=payload)
         create_new_page(name_input, theme_input, oracle_input, student_model_input)
         st.success(f"Page {name_input} created successfully!")
     else:

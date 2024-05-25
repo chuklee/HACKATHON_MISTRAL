@@ -23,20 +23,17 @@ with open(MODEL_PATH, "r", encoding="utf-8") as file:
 models = {}
 for category in data.values():
     for model_name in category:
-        if model_name == "hf_mistralai/Mistral-7B-v0.1":
-            models[model_name]
-        else:
-            modified_model_name = "_".join(model_name.split("_")[1:])
-            provider = model_name.split("_")[0]
-            if provider == "groq":
-                models[model_name] = ChatGroq(model=modified_model_name)
-            elif provider == "hf":
-                models[model_name] = HuggingFacePipeline.from_model_id(
-                    model_id="mistralai/Mistral-7B-v0.1",
-                    task="text-generation",
-                    device="auto",
-                    # pipeline_kwargs={"max_new_tokens": 10},
-                )
+        modified_model_name = "_".join(model_name.split("_")[1:])
+        provider = model_name.split("_")[0]
+        if provider == "groq":
+            models[model_name] = ChatGroq(model=modified_model_name)
+        elif provider == "hf":
+            models[model_name] = HuggingFacePipeline.from_model_id(
+                model_id="mistralai/Mistral-7B-v0.1",
+                task="text-generation",
+                device="auto",
+                # pipeline_kwargs={"max_new_tokens": 10},
+            )
 
 prompt = ChatPromptTemplate.from_messages(
     [

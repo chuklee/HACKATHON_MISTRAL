@@ -17,8 +17,8 @@ def push_model_to_hugging_face(model_path, repo_id):
     """
     try:
         if not os.path.exists(os.path.join(model_path, "README.md")):
-            readme_path = os.path.join(os.path.dirname(__file__), "README.md")
-            shutil.copy(readme_path, model_path)
+            readme_path = os.path.join(os.path.dirname(__file__), "TEMPLATE_README.md")
+            shutil.copy(readme_path, os.path.join(model_path, "README.md"))
         # Ensure the repository exists on the Hugging Face Hub
         api = HfApi()
         api.create_repo(repo_id, exist_ok=True)

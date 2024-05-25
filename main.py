@@ -4,6 +4,7 @@ This is the main file for the API.
 
 import os
 import logging
+import json
 from datetime import datetime
 from flask import Flask, request, jsonify
 from logging_config import logger
@@ -17,13 +18,16 @@ def main():
     Main function for the API.
     It will be run when the server is called with a GET or POST request on the address '/'.
     """
-    list_oracle = ["groq_llama3-70b-8192", "groq_mixtral-8x7b-32768"]
-    list_student = ["groq_gemma-7b-it", "groq_llama3-8b-8192"]
+    with open("models.json", "r", encoding="utf-8") as file:
+        data = json.load(file)
+        list_oracle = data["oracle"]
+        list_student = data["student"]
     if request.method == "POST":
         try:
             data = request.get_json(force=True)
             theme = data.get(
-                "theme", "Coding Data Structures and Algorithms exercises in Python"
+                "theme",
+                "Function Implementation of DataStructre and Algorithms in Python",
             )
             oracle = data.get("oracle", "groq_llama3-70b-8192")
             student_model = data.get("student_model", "groq_gemma-7b-it")
@@ -40,7 +44,7 @@ def main():
                 logging.error(error_message)
                 return jsonify(error=error_message), 400
 
-            response_message = f"Hello World {theme}!"
+            response_message = f"Hello World {theme}, {oracle}, {student_model}!"
             logging.info("Response: %s", response_message)
             return jsonify(message=response_message)
 

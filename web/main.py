@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 from utils import Row
-    
+
 
 
 st.set_page_config(page_title="smol. 🦎", page_icon="🦎", layout="wide")
@@ -19,22 +19,22 @@ st.markdown(
     }
     </style>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
 # Title and description
-st.title('smol. 🦎')
+st.title("smol. 🦎")
 
 # Sidebar inputs
 with st.sidebar:
     st.header("Configuration")
-    theme_input = st.text_input('Theme')
-    oracle_input = st.selectbox('Oracle', ['groq_llama3-70b-8192','groq_mixtral-8x7b-32768'])
-    student_model_input = st.selectbox('Student Model', ['groq_gemma-7b-it','groq_llama3-8b-8192'])
-    button_train = st.button('Train Model 🚀')
+    theme_input = st.text_input("Theme")
+    oracle_input = st.selectbox("Oracle", ["Llama3-70b-8192"])
+    student_model_input = st.selectbox("Student Model", ["Gemma7B"])
+    button_train = st.button("Train Model 🚀")
 
 # Initialize session state to store rows
-if 'row_list' not in st.session_state:
+if "row_list" not in st.session_state:
     st.session_state.row_list = []
 
 # Add new row to the session state
@@ -55,7 +55,9 @@ if button_train:
 
 # Display the dataframe using st.data_editor
 if st.session_state.row_list:
-    df = pd.DataFrame(st.session_state.row_list, columns=["Theme", "Oracle", "Student Model", "Link"])
+    df = pd.DataFrame(
+        st.session_state.row_list, columns=["Theme", "Oracle", "Student Model", "Link"]
+    )
     st.data_editor(
         df,
         column_config={
@@ -65,7 +67,7 @@ if st.session_state.row_list:
                 display_text="Model",
             )
         },
-        hide_index=True
+        hide_index=True,
     )
 else:
     st.write("No models trained yet.")

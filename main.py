@@ -4,6 +4,10 @@ app = Flask(__name__)
 
 @app.route('/', methods=['GET', 'POST'])
 def main():
+    """
+    Main function for the API.
+    It will be run when the server is call with a GET or POST request on the address '/'.
+    """
     list_oracle = ['groq_llama3-70b-8192', 'groq_mixtral-8x7b-32768']
     list_student = ['groq_gemma-7b-it', 'groq_llama3-8b-8192']
     if request.method == 'POST':

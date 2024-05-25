@@ -1,9 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
-from utils import Row
-
-
+from utils import Row, load_models
 
 st.set_page_config(page_title="smol. 🦎", page_icon="🦎", layout="wide")
 
@@ -27,10 +25,11 @@ st.title("smol. 🦎")
 
 # Sidebar inputs
 with st.sidebar:
+    oracles, students = load_models()
     st.header("Configuration")
     theme_input = st.text_input("Theme")
-    oracle_input = st.selectbox("Oracle", ["Llama3-70b-8192"])
-    student_model_input = st.selectbox("Student Model", ["Gemma7B"])
+    oracle_input = st.selectbox("Oracle", oracles)
+    student_model_input = st.selectbox("Student Model", students)
     button_train = st.button("Train Model 🚀")
 
 # Initialize session state to store rows

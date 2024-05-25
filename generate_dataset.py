@@ -7,6 +7,7 @@ from langchain_groq import ChatGroq
 from langchain_mistralai import ChatMistralAI
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.runnables import RunnableParallel
+import torch
 
 from langchain_core.pydantic_v1 import BaseModel, Field
 import json
@@ -21,6 +22,7 @@ with open(MODEL_PATH, "r", encoding="utf-8") as file:
     data = json.load(file)
 
 models = {}
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 for category in data.values():
     for model_name in category:
         modified_model_name = "_".join(model_name.split("_")[1:])
@@ -31,8 +33,9 @@ for category in data.values():
             models[model_name] = HuggingFacePipeline.from_model_id(
                 model_id="mistralai/Mistral-7B-v0.1",
                 task="text-generation",
-                device="auto",
-                # pipeline_kwargs={"max_new_tokens": 10},
+                device=0,
+                model_kwargs={"do_sample": True},
+                pipeline_kwargs={"max_new_tokens": 512, "temperature": 0.2, "repetition_penalty": 1.1},
             )
 
 prompt = ChatPromptTemplate.from_messages(
@@ -43,7 +46,7 @@ prompt = ChatPromptTemplate.from_messages(
         ),
         (
             "human",
-            "Give 25 diversified subcategories of the following main theme:  {text}",
+            "Give 2 diversified subcategories of the following main theme:  {text}",
         ),
     ]
 )
@@ -99,14 +102,18 @@ class FinalDatasetExemple(BaseModel):
 
 
 def generate_rejected(prompts: list[str], student_model: BaseChatModel):
+    # rejected = []
+    # runnables = {
+    #     f"{i}": (ChatPromptTemplate.from_template(prompt) | student_model)
+    #     for i, prompt in enumerate(prompts)
+    # }
+    # map_chain = RunnableParallel(**runnables)  # type: ignore
+    # outputs = map_chain.invoke({})
+    # rejected = [output for output in outputs.values()] if isinstance(student_model, HuggingFacePipeline) else [output.content for output in outputs.values()] 
     rejected = []
-    runnables = {
-        f"{i}": (ChatPromptTemplate.from_template(prompt) | student_model)
-        for i, prompt in enumerate(prompts)
-    }
-    map_chain = RunnableParallel(**runnables)  # type: ignore
-    outputs = map_chain.invoke({})
-    rejected = [output.content for output in outputs.values()]
+    for prompt in prompts:
+        runnable = ChatPromptTemplate.from_template(prompt) | student_model
+        rejected.append(runnable.invoke({}))
     return rejected
 
 
@@ -163,6 +170,8 @@ def generate_dataset(
 ) -> list[FinalDatasetExemple]:
     oracle_model = models[oracle_model_id]
     student_model = models[student_model_id]
+    print("Start")
+    print(student_model.invoke("Fait une fonction palidrome"))
     runnable = prompt | oracle_model.with_structured_output(schema=SubCategories)
     categories: SubCategories = runnable.invoke({"text": theme})  # type: ignore
     print(categories.subcategories)
@@ -198,6 +207,8 @@ def dump_dataset(
     # Generate a hash of the final dataset
     dataset_hash = hashlib.sha256(final_dataset.encode()).hexdigest()
     dataset_uuid = dataset_hash[:32]
+    oracle_model_id = oracle_model_id.replace("/", "_")
+    student_model_id = student_model_id.replace("/", "_")
     dataset_file_path = (
         f"datasets/{oracle_model_id}_{student_model_id}_{dataset_uuid}.json"
     )

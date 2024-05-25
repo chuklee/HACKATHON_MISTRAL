@@ -10,6 +10,8 @@ import torch
 import torch.nn as nn
 import gc
 from utils.save_model import save_model_locally
+import heapq
+
 
 def print_trainable_parameters(model):
     """
@@ -58,7 +60,7 @@ if __name__ == "__main__":
     ################
     # Dataset
     ################
-    dataset_path = 'dataset_3.json'
+    dataset_path = 'dataset.json'
     ds = load_dataset('json', data_files=dataset_path, split="train")
 
     def transform_to_conversation(prompt, response):
@@ -113,30 +115,45 @@ if __name__ == "__main__":
         max_length=1536,
     )
 
-    dpo_trainer.train()
+#    dpo_trainer.train()
+
+    data = dpo_trainer.get_train_dataloader()
+
+    exercises_rankings = []
+
+    for batch in data:
+        recap = dpo_trainer.get_batch_loss_metrics(dpo_trainer.model, batch)
+        exercises_rankings.append((batch['prompt'], recap[1]['rewards/chosen'].item()))
+        del recap
+        gc.collect()
+
+
+    top_2_exercises_rankings = heapq.nsmallest(2, exercises_rankings, key=lambda x: x[1])
+    print(top_2_exercises_rankings)
+
 
     # Save artifacts
-    dpo_trainer.model.save_pretrained("final_checkpoint")
-    tokenizer.save_pretrained("final_checkpoint")
-
-    # Flush memory
-    del dpo_trainer, model
-    gc.collect()
-    torch.cuda.empty_cache()
-
-    # Reload model in FP16 (instead of NF4)
-    base_model = AutoModelForCausalLM.from_pretrained(
-        model_path,
-        return_dict=True,
-        torch_dtype=torch.float16,
-    )
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
-
-    # Merge base model with the adapter
-    model = PeftModel.from_pretrained(base_model, "final_checkpoint")
-    model = model.merge_and_unload()
-
-    save_model_locally(model, tokenizer, "./dpo_mistral")
+#    dpo_trainer.model.save_pretrained("final_checkpoint")
+#    tokenizer.save_pretrained("final_checkpoint")
+#
+#    # Flush memory
+#    del dpo_trainer, model
+#    gc.collect()
+#    torch.cuda.empty_cache()
+#
+#    # Reload model in FP16 (instead of NF4)
+#    base_model = AutoModelForCausalLM.from_pretrained(
+#        model_path,
+#        return_dict=True,
+#        torch_dtype=torch.float16,
+#    )
+#    tokenizer = AutoTokenizer.from_pretrained(model_path)
+#
+#    # Merge base model with the adapter
+#    model = PeftModel.from_pretrained(base_model, "final_checkpoint")
+#    model = model.merge_and_unload()
+#
+#    save_model_locally(model, tokenizer, "./dpo_mistral")
 
 
     # Save model and tokenizer

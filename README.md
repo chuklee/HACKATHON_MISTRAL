@@ -51,7 +51,7 @@ There are two servers to run. The first one is the server that will receive the 
 To run the server that will receive the requests from the client side, you can run the following command:
 
 ```bash
-streamlit run 1_🏠_Home.py
+streamlit run web/1_🏠_Home.py
 ```
 
 To run the server that will run the automatic fine-tuning pipeline, you can run the following command:

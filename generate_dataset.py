@@ -35,6 +35,7 @@ for category in data.values():
                 task="text-generation",
                 device=0,
                 model_kwargs={"do_sample": True},
+                batch_size=4,
                 pipeline_kwargs={"max_new_tokens": 512, "temperature": 0.2, "repetition_penalty": 1.1},
             )
 
@@ -56,7 +57,7 @@ prompt_data_generation = ChatPromptTemplate.from_messages(
         (
             "system",
             """You are a synthetic data generator. Your task is to generate a dataset based on a given theme and category.
-Create 25 questions/answer within the specified category, ensuring they gradually increase in complexity.""",
+Create 8 questions/answer within the specified category, ensuring they gradually increase in complexity.""",
         ),
         (
             "human",
@@ -110,7 +111,8 @@ def generate_rejected(prompts: list[str], student_model: BaseChatModel):
     # map_chain = RunnableParallel(**runnables)  # type: ignore
     # outputs = map_chain.invoke({})
     # rejected = [output for output in outputs.values()] if isinstance(student_model, HuggingFacePipeline) else [output.content for output in outputs.values()] 
-    rejected = []
+    rejected = student_model.batch([{"question": prompt for prompt in prompts}])
+    return rejected
     for prompt in prompts:
         runnable = ChatPromptTemplate.from_template(prompt) | student_model
         rejected.append(runnable.invoke({}))

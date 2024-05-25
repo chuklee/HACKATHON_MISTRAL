@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
+import requests
 from utils import Row
+    
+
 
 st.set_page_config(page_title="smol. 🦎", page_icon="🦎", layout="wide")
 
@@ -26,8 +29,8 @@ st.title('smol. 🦎')
 with st.sidebar:
     st.header("Configuration")
     theme_input = st.text_input('Theme')
-    oracle_input = st.selectbox('Oracle', ['Llama3-70b-8192'])
-    student_model_input = st.selectbox('Student Model', ['Gemma7B'])
+    oracle_input = st.selectbox('Oracle', ['groq_llama3-70b-8192','groq_mixtral-8x7b-32768'])
+    student_model_input = st.selectbox('Student Model', ['groq_gemma-7b-it','groq_llama3-8b-8192'])
     button_train = st.button('Train Model 🚀')
 
 # Initialize session state to store rows
@@ -39,6 +42,14 @@ if button_train:
     if theme_input and oracle_input and student_model_input:
         row = Row(theme_input, oracle_input, student_model_input)
         st.session_state.row_list.append(row.to_dict())
+        api_endpoint = "http://127.0.0.1:105/create_model"
+        payload = {
+            "theme": theme_input,
+            "oracle": oracle_input,
+            "student_model": student_model_input
+        }
+        response = requests.post(api_endpoint, json=payload)
+        
     else:
         st.error("Please fill in all fields before starting the training.")
 

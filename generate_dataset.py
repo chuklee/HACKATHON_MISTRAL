@@ -112,7 +112,7 @@ def generate_rejected(prompts: list[str], student_model: BaseChatModel):
     # map_chain = RunnableParallel(**runnables)  # type: ignore
     # outputs = map_chain.invoke({})
     # rejected = [output for output in outputs.values()] if isinstance(student_model, HuggingFacePipeline) else [output.content for output in outputs.values()] 
-    rejected = student_model.batch([BaseMessage(prompt) for prompt in prompts])
+    rejected = student_model.batch([BaseMessage(content=prompt, type="question") for prompt in prompts])
     return rejected
     for prompt in prompts:
         runnable = ChatPromptTemplate.from_template(prompt) | student_model

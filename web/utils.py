@@ -1,6 +1,6 @@
 import json
 
-MODEL_PATH = "../models.json"
+MODEL_PATH = "models.json"
 
 def read_json(path: str) -> dict:
     with open(path, 'r') as f:

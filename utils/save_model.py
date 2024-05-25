@@ -1,4 +1,5 @@
 from huggingface_hub import HfApi, HfFolder, create_repo, upload_folder
+from logging_config import logger
 import os
 import shutil
 
@@ -21,15 +22,16 @@ def push_model_to_hugging_face(model_path, repo_id):
         # Ensure the repository exists on the Hugging Face Hub
         api = HfApi()
         api.create_repo(repo_id, exist_ok=True)
-        print(f"Created repository: {repo_id}")
+        logger.info("Created repository: %s", repo_id)
         # Upload the model files to the repository
         upload_folder(
             folder_path=model_path,
             repo_id=repo_id,
             commit_message="Add new model version",
         )
+        logger.info("Model uploaded successfully")
     except Exception as e:
-        print(f"An error occurred: {str(e)}")
+        logger.exception("An error occurred: %s", str(e))
 
 
 def save_model_locally(model, tokenizer, model_path):
@@ -45,11 +47,13 @@ def save_model_locally(model, tokenizer, model_path):
     - None
     """
     try:
+        logger.info("Saving model and tokenizer to: %s", model_path)
         # Save the model and tokenizer
         model.save_pretrained(model_path)
         tokenizer.save_pretrained(model_path)
+        logger.info("Model and tokenizer saved successfully")
     except Exception as e:
-        print(f"An error occurred: {str(e)}")
+        logger.exception("An error occurred: %s", str(e))
 
 
 def save_model_locally_and_push_to_hugging_face(
@@ -68,13 +72,14 @@ def save_model_locally_and_push_to_hugging_face(
     - None
     """
     try:
-        # Save the model locally
+        logger.info("Saving model and tokenizer locally")
         if not os.path.exists(model_path):
             os.makedirs(model_path)
+        logger.info("Saving model and tokenizer locally")
         save_model_locally(model, tokenizer, model_path)
 
         # Push the model to the Hugging Face Hub
-        print("pushing model to hugging face")
+        logger.info("Pushing model to Hugging Face Hub")
         push_model_to_hugging_face(model_path, repo_name)
     except Exception as e:
-        print(f"An error occurred: {str(e)}")
+        logger.exception("An error occurred: %s", str(e))

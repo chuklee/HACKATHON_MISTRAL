@@ -6,20 +6,9 @@ import os
 import logging
 from datetime import datetime
 from flask import Flask, request, jsonify
+from logging_config import logger
 
 app = Flask(__name__)
-
-# Set up logging
-LOG_FOLDER = "log"
-if not os.path.exists(LOG_FOLDER):
-    os.makedirs(LOG_FOLDER)
-
-log_filename = os.path.join(LOG_FOLDER, datetime.now().strftime("%Y-%m-%d") + ".log")
-logging.basicConfig(
-    filename=log_filename,
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
 
 
 @app.route("/create_model", methods=["GET", "POST"])
@@ -36,7 +25,7 @@ def main():
             theme = data.get(
                 "theme", "Coding Data Structures and Algorithms exercises in Python"
             )
-            oracle = data.get("model", "groq_llama3-70b-8192")
+            oracle = data.get("oracle", "groq_llama3-70b-8192")
             student_model = data.get("student_model", "groq_gemma-7b-it")
 
             logging.info("Received POST request with data: %s", data)
@@ -70,4 +59,4 @@ def get_response():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=105)
+    app.run(host="0.0.0.0", port=105, debug=True)

@@ -13,7 +13,7 @@ import json
 import concurrent.futures
 import hashlib
 
-MODEL_PATH = 'model.json'
+MODEL_PATH = 'models.json'
 with open(MODEL_PATH, 'r', encoding='utf-8') as file:
     data = json.load(file)
 
@@ -21,7 +21,7 @@ models = {}
 for category in data.values():
     for model_name in category:
         modified_model_name = '_'.join(model_name.split('_')[1:])
-        models[modified_model_name] = ChatGroq(model=modified_model_name)
+        models[model_name] = ChatGroq(model=modified_model_name)
 
 prompt = ChatPromptTemplate.from_messages(
     [

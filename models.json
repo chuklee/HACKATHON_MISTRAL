@@ -5,6 +5,7 @@
     ],
     "student": [
         "groq_gemma-7b-it",
-        "groq_llama3-8b-8192"
+        "groq_llama3-8b-8192",
+        "hf_mistralai/Mistral-7B-v0.1"
     ]
 }

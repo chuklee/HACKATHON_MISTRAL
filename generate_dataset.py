@@ -13,6 +13,8 @@ import json
 import concurrent.futures
 import hashlib
 from typing import Optional
+from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
+
 
 MODEL_PATH = "models.json"
 with open(MODEL_PATH, "r", encoding="utf-8") as file:
@@ -21,8 +23,20 @@ with open(MODEL_PATH, "r", encoding="utf-8") as file:
 models = {}
 for category in data.values():
     for model_name in category:
-        modified_model_name = "_".join(model_name.split("_")[1:])
-        models[model_name] = ChatGroq(model=modified_model_name)
+        if model_name == "hf_mistralai/Mistral-7B-v0.1":
+            models[model_name]
+        else:
+            modified_model_name = "_".join(model_name.split("_")[1:])
+            provider = model_name.split("_")[0]
+            if provider == "groq":
+                models[model_name] = ChatGroq(model=modified_model_name)
+            elif provider == "hf":
+                models[model_name] = HuggingFacePipeline.from_model_id(
+                    model_id="mistralai/Mistral-7B-v0.1",
+                    task="text-generation",
+                    device="auto",
+                    # pipeline_kwargs={"max_new_tokens": 10},
+                )
 
 prompt = ChatPromptTemplate.from_messages(
     [
@@ -42,7 +56,7 @@ prompt_data_generation = ChatPromptTemplate.from_messages(
         (
             "system",
             """You are a synthetic data generator. Your task is to generate a dataset based on a given theme and category.
-Create 25 questions/answer within the specified category, ensuring they gradually increase in complexity."""
+Create 25 questions/answer within the specified category, ensuring they gradually increase in complexity.""",
         ),
         (
             "human",
@@ -60,7 +74,7 @@ Answer are as follow: {example_answer}
 #     [
 #         (
 #             "system",
-#             """You are a synthetic data generator. Your task is to generate a dataset based on a given theme and category. 
+#             """You are a synthetic data generator. Your task is to generate a dataset based on a given theme and category.
 #        Create 2 questions within the specified category, ensuring they gradually increase in complexity. The last question should be very challenging.""",
 #         ),
 #         ("human", "Generate a synthetic dataset with the following theme: {text}."),
@@ -227,7 +241,7 @@ if __name__ == "__main__":
     path = create_dataset(
         theme,
         "groq_llama3-70b-8192",
-        "groq_gemma-7b-it",
+        "hf_mistralai/Mistral-7B-v0.1",
         conditions,
         example_question,
         example_answer,

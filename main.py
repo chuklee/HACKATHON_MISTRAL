@@ -8,6 +8,7 @@ import json
 from datetime import datetime
 from flask import Flask, request, jsonify
 from logging_config import logger
+from generate_dataset import create_dataset
 
 app = Flask(__name__)
 
@@ -44,7 +45,8 @@ def main():
                 logging.error(error_message)
                 return jsonify(error=error_message), 400
 
-            response_message = f"Hello World {theme}, {oracle}, {student_model}!"
+            dataset_path = create_dataset(theme, oracle, student_model)
+            response_message = f"Dataset created successfully at {dataset_path}"
             logging.info("Response: %s", response_message)
             return jsonify(message=response_message)
 

@@ -6,9 +6,10 @@ import os
 import logging
 import json
 from datetime import datetime
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response, render_template_string
 from logging_config import logger
 from generate_dataset import create_dataset
+from utils.wait_function import wait_10_seconds
 
 app = Flask(__name__)
 
@@ -23,6 +24,7 @@ def main():
         data = json.load(file)
         list_oracle = data["oracle"]
         list_student = data["student"]
+    
     if request.method == "POST":
         try:
             data = request.get_json(force=True)
@@ -32,7 +34,9 @@ def main():
             )
             oracle = data.get("oracle", "groq_llama3-70b-8192")
             student_model = data.get("student_model", "groq_gemma-7b-it")
-
+            condition = data.get("condition", "")
+            question_example = data.get("question_example", "")
+            answer_example = data.get("answer_example", "")
             logging.info("Received POST request with data: %s", data)
 
             if oracle not in list_oracle:
@@ -45,7 +49,8 @@ def main():
                 logging.error(error_message)
                 return jsonify(error=error_message), 400
 
-            dataset_path = create_dataset(theme, oracle, student_model)
+            #dataset_path = create_dataset(theme, oracle, student_model, condition, question_example, answer_example)
+            dataset_path = wait_10_seconds()
             response_message = f"Dataset created successfully at {dataset_path}"
             logging.info("Response: %s", response_message)
             return jsonify(message=response_message)
@@ -62,7 +67,6 @@ def main():
 def get_response():
     logging.info("Received GET request at /get_response")
     return "Hello World!"
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=105, debug=True)

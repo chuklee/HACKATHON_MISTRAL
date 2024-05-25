@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import requests
-from utils import Row, load_models
 import time  # For simulating progress
+from utils import Row, load_models
+from sse_component import sse_component
 
 st.set_page_config(page_title="smol. 🦎", page_icon="🦎", layout="wide")
 
@@ -37,23 +38,11 @@ with st.sidebar:
 if "row_list" not in st.session_state:
     st.session_state.row_list = []
 
-# Function to simulate progress
-def simulate_training(progress_bar):
-    for i in range(101):
-        time.sleep(0.005)  # Simulate time delay for training
-        progress_bar.progress(i)
-
 # Add new row to the session state
 if button_train:
     if theme_input and oracle_input and student_model_input:
         row = Row(theme_input, oracle_input, student_model_input)
         st.session_state.row_list.append(row.to_dict())
-        
-        # Create a progress bar
-        progress_bar = st.progress(0)
-        
-        # Simulate training progress
-        simulate_training(progress_bar)
         
         api_endpoint = "http://127.0.0.1:105/create_model"
         payload = {
@@ -61,7 +50,13 @@ if button_train:
             "oracle": oracle_input,
             "student_model": student_model_input
         }
+        
+        # Display the progress bar using the custom SSE component
+        sse_component()
+        
         response = requests.post(api_endpoint, json=payload)
+        if response.status_code != 200:
+            st.error(f"Error: {response.json().get('error', 'Unknown error')}")
         
     else:
         st.error("Please fill in all fields before starting the training.")

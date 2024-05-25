@@ -9,5 +9,5 @@ class Row:
             "Theme": self.theme_input,
             "Oracle": self.oracle_input,
             "Student Model": self.student_model_input,
-            "Link": f"https://example.com/{self.theme_input}"
+            "Link": f"https://example.com/{self.theme_input}",
         }

@@ -18,15 +18,16 @@ def main():
     Main function for the API.
     It will be run when the server is called with a GET or POST request on the address '/'.
     """
-    with open('models.json', 'r', encoding='utf-8') as file:
+    with open("models.json", "r", encoding="utf-8") as file:
         data = json.load(file)
-        list_oracle = data['oracle']
-        list_student = data['student']
+        list_oracle = data["oracle"]
+        list_student = data["student"]
     if request.method == "POST":
         try:
             data = request.get_json(force=True)
             theme = data.get(
-                "theme", "Function Implementation of DataStructre and Algorithms in Python"
+                "theme",
+                "Function Implementation of DataStructre and Algorithms in Python",
             )
             oracle = data.get("oracle", "groq_llama3-70b-8192")
             student_model = data.get("student_model", "groq_gemma-7b-it")

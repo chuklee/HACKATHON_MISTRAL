@@ -7,9 +7,9 @@ To summarize, the platform allows users to automatically create a small fine-tun
 It opens the door to a new and fastest way to create agent specialized in a specific task.
 
 ## Participants
-- Eithan.Nakache
-- Martin.Natale
-- Ilyas.Oulkadda
+- Eithan Nakache
+- Martin Natale
+- Ilyas Oulkadda
 - Camil Ziane
 
 ## Installation

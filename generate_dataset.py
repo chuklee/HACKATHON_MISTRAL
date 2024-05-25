@@ -15,6 +15,7 @@ import concurrent.futures
 import hashlib
 from typing import Optional
 from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
+from langchain_core.messages.base import BaseMessage
 
 
 MODEL_PATH = "models.json"
@@ -111,7 +112,7 @@ def generate_rejected(prompts: list[str], student_model: BaseChatModel):
     # map_chain = RunnableParallel(**runnables)  # type: ignore
     # outputs = map_chain.invoke({})
     # rejected = [output for output in outputs.values()] if isinstance(student_model, HuggingFacePipeline) else [output.content for output in outputs.values()] 
-    rejected = student_model.batch([{"question": prompt for prompt in prompts}])
+    rejected = student_model.batch([BaseMessage(prompt) for prompt in prompt])
     return rejected
     for prompt in prompts:
         runnable = ChatPromptTemplate.from_template(prompt) | student_model

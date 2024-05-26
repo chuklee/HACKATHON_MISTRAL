@@ -270,13 +270,24 @@ def generate_dataset(
 def generate_similar_dataset(
     reference_questions: list[str],
     oracle_model_id: str,
-    student_model_id: str,
+    student_model_path: str,
     conditions: str,
     example_question: str,
     example_answer: str,
 ) -> list[FinalDatasetExemple]:
     oracle_model = models[oracle_model_id]
-    student_model = models[student_model_id]
+    student_model = HuggingFacePipeline.from_model_id(
+        model_id=student_model_path,
+        task="text-generation",
+        device=0,
+        model_kwargs={"do_sample": True},
+        batch_size=4,
+        pipeline_kwargs={
+            "max_new_tokens": 512,
+            "temperature": 0.2,
+            "repetition_penalty": 1.1,
+        },
+    )
     dataset: list[FinalDatasetExemple] = []
 
     def worker(reference_question):
@@ -284,7 +295,7 @@ def generate_similar_dataset(
             reference_question,
             dataset,
             oracle_model,
-            student_model,
+            student_model,  # type: ignore
             conditions,
             example_question,
             example_answer,
@@ -338,20 +349,20 @@ def create_dataset(
 def create_similar_dataset(
     reference_questions: list[str],
     oracle_model_id,
-    student_model_id,
     conditions,
     example_question,
     example_answer,
+    student_model_path="./dpo_mistral",
 ):
     dataset = generate_similar_dataset(
         reference_questions,
         oracle_model_id,
-        student_model_id,
+        student_model_path,
         conditions,
         example_question,
         example_answer,
     )
-    return dump_dataset(dataset, oracle_model_id, student_model_id)
+    return dump_dataset(dataset, oracle_model_id, student_model_path)
 
 
 if __name__ == "__main__":
@@ -379,9 +390,9 @@ if __name__ == "__main__":
             'def longest_subarray_with_k_distinct_chars(s: str, k: int) -> int: """ Given a string and an integer k, find the length of the longest substring that contains at most k distinct characters. """',
         ],
         "groq_llama3-70b-8192",
-        "hf_mistralai/Mistral-7B-v0.1",
         conditions,
         example_question,
         example_answer,
+        "hf_mistralai/Mistral-7B-v0.1",
     )
     print(path)

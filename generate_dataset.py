@@ -14,6 +14,8 @@ import hashlib
 from typing import Optional
 from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
 from langchain_core.messages.base import BaseMessage
+from logging_config import logger
+
 
 
 MODEL_PATH = "models.json"
@@ -21,25 +23,29 @@ with open(MODEL_PATH, "r", encoding="utf-8") as file:
     data = json.load(file)
 
 models = {}
-for category in data.values():
-    for model_name in category:
-        modified_model_name = "_".join(model_name.split("_")[1:])
-        provider = model_name.split("_")[0]
-        if provider == "groq":
-            models[model_name] = lambda _ :ChatGroq(model=modified_model_name)
-        elif provider == "hf":
-            models[model_name] = lambda _: HuggingFacePipeline.from_model_id(
-                model_id="mistralai/Mistral-7B-v0.1",
-                task="text-generation",
-                device=0,
-                model_kwargs={"do_sample": True},
-                batch_size=4,
-                pipeline_kwargs={
-                    "max_new_tokens": 512,
-                    "temperature": 0.2,
-                    "repetition_penalty": 1.1,
-                },
-            )
+
+def load_model(model_id):
+    for category in data.values():
+        for model_name in category:
+            if model_name != model_id:
+                continue
+            modified_model_name = "_".join(model_name.split("_")[1:])
+            provider = model_name.split("_")[0]
+            if provider == "groq":
+                return ChatGroq(model=modified_model_name) 
+            elif provider == "hf":
+                return HuggingFacePipeline.from_model_id(
+                    model_id="mistralai/Mistral-7B-v0.1",
+                    task="text-generation",
+                    device=0,
+                    model_kwargs={"do_sample": True},
+                    batch_size=4,
+                    pipeline_kwargs={
+                        "max_new_tokens": 512,
+                        "temperature": 0.2,
+                        "repetition_penalty": 1.1,
+                    },
+                )
 
 prompt = ChatPromptTemplate.from_messages(
     [
@@ -49,7 +55,7 @@ prompt = ChatPromptTemplate.from_messages(
         ),
         (
             "human",
-            "Give 25 diversified subcategories of the following main theme:  {text}",
+            "Give 3 diversified subcategories of the following main theme:  {text}",
         ),
     ]
 )
@@ -59,7 +65,7 @@ prompt_data_generation = ChatPromptTemplate.from_messages(
         (
             "system",
             """You are a synthetic data generator. Your task is to generate a dataset based on a given theme and category.
-Create 12 questions/answer within the specified category, ensuring they gradually increase in complexity.""",
+Create 4 questions/answer within the specified category, ensuring they gradually increase in complexity.""",
         ),
         (
             "human",
@@ -237,8 +243,8 @@ def generate_dataset(
     example_question: str,
     example_answer: str,
 ) -> list[FinalDatasetExemple]:
-    oracle_model = models[oracle_model_id]()
-    student_model = models[student_model_id]()
+    oracle_model = load_model(oracle_model_id)
+    student_model = load_model(student_model_id)
     print("Start")
     print(student_model.invoke("Fait une fonction palidrome"))
     runnable = prompt | oracle_model.with_structured_output(schema=SubCategories)
@@ -275,7 +281,7 @@ def generate_similar_dataset(
     example_question: str,
     example_answer: str,
 ) -> list[FinalDatasetExemple]:
-    oracle_model = models[oracle_model_id]()
+    oracle_model = load_model(oracle_model_id)
     student_model = HuggingFacePipeline.from_model_id(
         model_id=student_model_path,
         task="text-generation",

@@ -29,6 +29,10 @@ To summarize, the platform allows users to automatically create a small fine-tun
 ## Installation
 This project use python 3.10.12, you can create a virtual environment with the following command:
 
+A Weight And Bias key if you want to have a train report.
+Your HuggingFace Read and Write tokens to load the models you want to fine-tune and upload your model on your HuggingFace Hub
+Your Groq/Mistral/OpenAI API key for oracles.
+
 ```bash
 conda create -n smol python=3.10.12
 ```

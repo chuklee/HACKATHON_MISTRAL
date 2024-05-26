@@ -53,6 +53,9 @@ with st.container():
     theme_input = st.text_input("Theme")
     oracle_input = st.selectbox("Oracle", oracles)
     student_model_input = st.selectbox("Student", students)
+    condition_input = st.text_input("Condition")
+    question_example_input = st.text_input("Question Example")
+    answer_example_input = st.text_input("Answer Example")
     button_train = st.button("Train Model 🚀")
     if button_train:
         if theme_input and oracle_input and student_model_input:
@@ -60,7 +63,10 @@ with st.container():
             payload = {
                 "theme": theme_input,
                 "oracle": oracle_input,
-                "student_model": student_model_input
+                "student_model": student_model_input,
+                "condition": condition_input,
+                "question_example": question_example_input,
+                "answer_example": answer_example_input,
             }
             response = requests.post(CREATE_MODEL_ENV_ENDPOINT, json=payload)
             create_new_page(name_input, theme_input, oracle_input, student_model_input)

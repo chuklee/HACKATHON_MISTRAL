@@ -14,14 +14,14 @@ st.write(f"**Oracle**: {oracle_input}")
 st.write(f"**Student**: {student_model_input}")
 
 
-model = RemoteRunnable("http://localhost:8000/smol/")
+model = RemoteRunnable("https://87be-195-242-24-207.ngrok-free.app/smol/")
 
 # Initialize chat history
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages_smol = []
 
 # Display chat messages from history on app rerun
-for message in st.session_state.messages:
+for message in st.session_state.messages_smol:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
@@ -31,7 +31,7 @@ if prompt := st.chat_input("What is up?"):
     with st.chat_message("user"):
         st.markdown(prompt)
     # Add user message to chat history
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.session_state.messages_smol.append({"role": "user", "content": prompt})
     
 if prompt:
     chat_prompt = ChatPromptTemplate.from_messages(
@@ -44,4 +44,4 @@ if prompt:
     with st.chat_message("assistant"):
         st.markdown(response)
     # Add assistant response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": response})
+    st.session_state.messages_smol.append({"role": "assistant", "content": response})

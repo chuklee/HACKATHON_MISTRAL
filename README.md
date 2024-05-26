@@ -1,8 +1,21 @@
-# Smol🦎
+# smol🦎
 
-**Smol** is our project for the Hackathons of Mistral AI. The project is a platform that allows users to automatically create a small fine-tuned model (Student) from a larger pre-trained model (Oracle) on a specific task. We used an **unseen method of training using a combination of adversarial and curriculum learning to leverage the most out of our datasets to align our model with human preferences.**
+**smol** is our project for the Mistral AI Hackathon. The project is a platform that allows users to automatically create a small fine-tuned model (Student) from a larger pre-trained model (Oracle) on a specific task. We used an **unseen method of training using a combination of adversarial and curriculum learning to leverage the most out of our datasets to align our model with human preferences.**
 
 **It opens the door to a new and fastest way to create agent specialized in a specific task.**
+
+## Sponsors
+## [Groq](https://www.groq.com/)
+![Groq](web/groq.png)
+
+## [Mistral](https://www.mistral.ai/)
+![Mistral](web/mistral.jpg)
+
+## [Nebius](https://nebius.ai/)
+![Nebius](web/nebius.png)
+
+## [Station F](https://stationf.co/)
+![Station F](web/stationf.png)
 
 ## Key Features
 The core idea involves using a Large Language Model (e.g., Mistral Large) to generate a dataset tailored for fine-tuning a smaller model (e.g., Mistral Small). The small model is then trained using a Direct Preference Optimization (DPO) algorithm. Here's a breakdown of the process:
@@ -14,7 +27,7 @@ The core idea involves using a Large Language Model (e.g., Mistral Large) to gen
 
 4. **Iterative Fine-tuning**: The small model undergoes further fine-tuning with this new dataset.
 
-5. **Repetition**: Steps 4-5 are repeated until user-defined limits are met.
+5. **Repetition**: Steps 3-4 are repeated until user-defined limits are met.
 
 To summarize, the platform allows users to automatically create a small fine-tuned model from a pre-trained model on a specific task. The user can then use the fine-tuned model by a endpoint give by the platform.
 
@@ -41,6 +54,15 @@ Then, you can activate the environment with:
 
 ```bash
 conda activate smol
+```
+
+Create a .env file in the root directory with the following content:
+
+```bash
+GROQ_API_KEY=
+FIREWORKS_API_KEY=
+MISTRAL_API_KEY=
+HUGGING_FACE_API_KEY=
 ```
 
 You can then install the dependencies with the following command:

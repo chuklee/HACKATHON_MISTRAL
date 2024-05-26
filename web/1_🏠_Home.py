@@ -27,7 +27,7 @@ if st.session_state["show_api_gestion"]:
         GROQ_API_KEY= st.text_input("GROQ API Key")  
         FIREWORKS_API_KEY = st.text_input("FIREWORKS API Key")
         MISTRAL_API_KEY = st.text_input("MISTRAL API Key")
-        HUGGING_FACE_API_KEY = st.text_input("MISTRAL API Key")
+        HUGGING_FACE_API_KEY = st.text_input("Hugging Face API Key")
         oracles, students = load_models()
         button_submit_key = st.button("Submit API Keys 🔑")
         if button_submit_key:
@@ -53,14 +53,25 @@ with st.container():
     theme_input = st.text_input("Theme")
     oracle_input = st.selectbox("Oracle", oracles)
     student_model_input = st.selectbox("Student", students)
+    condition_input = st.text_input("Condition")
+    question_example_input = st.text_input("Question Example")
+    answer_example_input = st.text_input("Answer Example")
     button_train = st.button("Train Model 🚀")
+    st.markdown("---")
+    st.markdown("<div style='text-align: left'>Powered by</div>", unsafe_allow_html=True)
+    st.image("web/mistral.jpg", width=100)
+    st.image("web/groq.png", width=100)
+    st.image("web/nebius.png", width=100)
     if button_train:
         if theme_input and oracle_input and student_model_input:
             CREATE_MODEL_ENV_ENDPOINT = "http://127.0.0.1:105/create_model"
             payload = {
                 "theme": theme_input,
                 "oracle": oracle_input,
-                "student_model": student_model_input
+                "student_model": student_model_input,
+                "condition": condition_input,
+                "question_example": question_example_input,
+                "answer_example": answer_example_input,
             }
             response = requests.post(CREATE_MODEL_ENV_ENDPOINT, json=payload)
             create_new_page(name_input, theme_input, oracle_input, student_model_input)

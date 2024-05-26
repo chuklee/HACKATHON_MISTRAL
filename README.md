@@ -1,6 +1,6 @@
-# Smol🦎
+# smol🦎
 
-**Smol** is our project for the Hackathons of Mistral AI. The project is a platform that allows users to automatically create a small fine-tuned model (Student) from a larger pre-trained model (Oracle) on a specific task. We used an **unseen method of training using a combination of adversarial and curriculum learning to leverage the most out of our datasets to align our model with human preferences.**
+**smol** is our project for the Mistral AI Hackathon. The project is a platform that allows users to automatically create a small fine-tuned model (Student) from a larger pre-trained model (Oracle) on a specific task. We used an **unseen method of training using a combination of adversarial and curriculum learning to leverage the most out of our datasets to align our model with human preferences.**
 
 **It opens the door to a new and fastest way to create agent specialized in a specific task.**
 

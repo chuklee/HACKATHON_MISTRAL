@@ -57,6 +57,11 @@ with st.container():
     question_example_input = st.text_input("Question Example")
     answer_example_input = st.text_input("Answer Example")
     button_train = st.button("Train Model 🚀")
+    st.markdown("---")
+    st.markdown("<div style='text-align: left'>Powered by</div>", unsafe_allow_html=True)
+    st.image("web/mistral.jpg", width=100)
+    st.image("web/groq.png", width=100)
+    st.image("web/nebius.png", width=100)
     if button_train:
         if theme_input and oracle_input and student_model_input:
             CREATE_MODEL_ENV_ENDPOINT = "http://127.0.0.1:105/create_model"

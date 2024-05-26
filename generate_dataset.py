@@ -349,10 +349,10 @@ def create_dataset(
 def create_similar_dataset(
     reference_questions: list[str],
     oracle_model_id,
+    student_model_path: str,
     conditions,
     example_question,
     example_answer,
-    student_model_path="./dpo_mistral",
 ):
     dataset = generate_similar_dataset(
         reference_questions,
@@ -390,9 +390,9 @@ if __name__ == "__main__":
             'def longest_subarray_with_k_distinct_chars(s: str, k: int) -> int: """ Given a string and an integer k, find the length of the longest substring that contains at most k distinct characters. """',
         ],
         "groq_llama3-70b-8192",
+        "./dpo_mistral",
         conditions,
         example_question,
         example_answer,
-        "hf_mistralai/Mistral-7B-v0.1",
     )
     print(path)

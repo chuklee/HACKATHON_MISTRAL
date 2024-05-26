@@ -46,7 +46,7 @@ def get_top_2_exercises_rankings(dpo_trainer):
 
 
     top_2_exercises_rankings = heapq.nsmallest(2, exercises_rankings, key=lambda x: x[1])
-    return top_2_exercises_rankings
+    return [exercise[0] for exercise in top_2_exercises_rankings]
 
 def train_model(model, tokenizer, train_dataset):
 

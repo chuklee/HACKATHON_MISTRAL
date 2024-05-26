@@ -10,7 +10,7 @@ from flask import Flask, request, jsonify, Response, render_template_string
 from logging_config import logger
 from generate_dataset import create_dataset
 from utils.wait_function import wait_10_seconds
-
+from dpo import fine_tune
 from utils.save_model import push_model_to_hugging_face
 app = Flask(__name__)
 
@@ -51,6 +51,9 @@ def main():
                 return jsonify(error=error_message), 400
 
             dataset_path = create_dataset(theme, oracle, student_model, condition, question_example, answer_example)
+            logging.info("Dataset created successfully at %s", dataset_path)
+            fine_tune(student_model, "mistralai/Mistral-7B-v0.1", dataset_path)
+            logging.info("Model fine-tuned successfully")
             response_message = f"Dataset created successfully at {dataset_path}"
             logging.info("Response: %s", response_message)
             return jsonify(message=response_message)

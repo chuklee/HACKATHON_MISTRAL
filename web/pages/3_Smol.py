@@ -4,12 +4,17 @@ from langserve import RemoteRunnable
 
 st.set_page_config(page_title="Model Details", page_icon="🤖")
 name_input = "Mistral Small"
-theme_input = ""
-oracle_input = ""
-student_model_input = ""
+theme_input = "Python Coding Interview Exercises on Data Structures and Algorithms"
+oracle_input = "groq_llama3-70b-8192"
+student_model_input = "Mistral-7B-v0.1"
 st.title("Model Details")
 st.write(f"**Name**: {name_input}")
-model = RemoteRunnable("http://localhost:8000/mistral_small/")
+st.write(f"**Theme**: {theme_input}")
+st.write(f"**Oracle**: {oracle_input}")
+st.write(f"**Student**: {student_model_input}")
+
+
+model = RemoteRunnable("http://localhost:8000/smol/")
 
 # Initialize chat history
 if "messages" not in st.session_state:

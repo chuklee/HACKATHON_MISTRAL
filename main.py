@@ -33,11 +33,19 @@ def main():
                 "theme",
                 "Function Implementation of DataStructre and Algorithms in Python",
             )
+
+            conditions = 'Each question must present only the function signature formatted as follows: `def name_of_the_function(parameter_of_the_function):\\n"""docstring"""'
+            example_question = '''
+            from typing import List def has_close_elements(numbers: List[float], threshold: float) -> bool: """ Check if in given list of numbers, are any two numbers closer to each other than given threshold. """
+            '''
+            example_answer = """
+            for idx, elem in enumerate(numbers): for idx2, elem2 in enumerate(numbers): if idx != idx2: distance = abs(elem - elem2) if distance < threshold: return True return False
+            """
             oracle = data.get("oracle", "groq_llama3-70b-8192")
             student_model = data.get("student_model", "hf_mistralai/Mistral-7B-v0.1")
-            condition = data.get("condition", "")
-            question_example = data.get("question_example", "")
-            answer_example = data.get("answer_example", "")
+            condition = data.get("condition", conditions)
+            question_example = data.get("question_example", example_question)
+            answer_example = data.get("answer_example", example_answer)
             logging.info("Received POST request with data: %s", data)
 
             if oracle not in list_oracle:
@@ -51,7 +59,7 @@ def main():
                 return jsonify(error=error_message), 400
             dataset_path = create_dataset(theme, oracle, student_model, condition, question_example, answer_example)
             logging.info("Dataset created successfully at %s", dataset_path)
-            fine_tune(student_model, "mistralai/Mistral-7B-v0.1", dataset_path)
+            fine_tune(student_model, "mistralai/Mistral-7B-v0.1", dataset_path, condition, question_example, answer_example)
             logging.info("Model fine-tuned successfully")
             response_message = f"Dataset created successfully at {dataset_path}"
             logging.info("Response: %s", response_message)
@@ -96,4 +104,4 @@ def update_env():
     return jsonify(message="Environment variables updated successfully")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=105, debug=True)
+    app.run(host="0.0.0.0", port=105, debug=False)

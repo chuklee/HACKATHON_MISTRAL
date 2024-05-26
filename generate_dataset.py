@@ -55,7 +55,7 @@ prompt = ChatPromptTemplate.from_messages(
         ),
         (
             "human",
-            "Give 3 diversified subcategories of the following main theme:  {text}",
+            "Give 25 diversified subcategories of the following main theme:  {text}",
         ),
     ]
 )
@@ -65,7 +65,7 @@ prompt_data_generation = ChatPromptTemplate.from_messages(
         (
             "system",
             """You are a synthetic data generator. Your task is to generate a dataset based on a given theme and category.
-Create 4 questions/answer within the specified category, ensuring they gradually increase in complexity.""",
+Create 12 questions/answer within the specified category, ensuring they gradually increase in complexity.""",
         ),
         (
             "human",
@@ -84,7 +84,7 @@ prompt_similar_data_generation = ChatPromptTemplate.from_messages(
         (
             "system",
             """You are a synthetic data generator. Your task is to generate a dataset based on a given reference question.
-Create 3 questions/answer similar to the given reference questions, ensuring they gradually increase in complexity.""",
+Create 4 questions/answer similar to the given reference questions, ensuring they gradually increase in complexity.""",
         ),
         (
             "human",
@@ -246,7 +246,6 @@ def generate_dataset(
     oracle_model = load_model(oracle_model_id)
     student_model = load_model(student_model_id)
     print("Start")
-    print(student_model.invoke("Fait une fonction palidrome"))
     runnable = prompt | oracle_model.with_structured_output(schema=SubCategories)
     categories: SubCategories = runnable.invoke({"text": theme})  # type: ignore
     print(categories.subcategories)
@@ -296,6 +295,7 @@ def generate_similar_dataset(
     )
     dataset: list[FinalDatasetExemple] = []
 
+
     def worker(reference_question):
         return generate_similar_question(
             reference_question,
@@ -307,8 +307,12 @@ def generate_similar_dataset(
             example_answer,
         )
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        executor.map(worker, reference_questions)
+    for reference_question in reference_questions:
+        worker(reference_question) 
+    # with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        # executor.map(worker, reference_questions)
+
+
 
     return dataset
 
@@ -360,6 +364,7 @@ def create_similar_dataset(
     example_question,
     example_answer,
 ):
+    logger.info("Generating a new dataset with difficult examples")
     dataset = generate_similar_dataset(
         reference_questions,
         oracle_model_id,

@@ -18,15 +18,9 @@ import gc
 from utils.save_model import save_model_locally, save_model_locally_and_push_to_hugging_face
 import heapq
 from generate_dataset import create_similar_dataset
+from accelerate import PartialState
 
 # Examples for generating dataset.
-conditions = 'Each question must present only the function signature formatted as follows: `def name_of_the_function(parameter_of_the_function):\\n"""docstring"""'
-example_question = '''
-from typing import List def has_close_elements(numbers: List[float], threshold: float) -> bool: """ Check if in given list of numbers, are any two numbers closer to each other than given threshold. """
-'''
-example_answer = """
-for idx, elem in enumerate(numbers): for idx2, elem2 in enumerate(numbers): if idx != idx2: distance = abs(elem - elem2) if distance < threshold: return True return False
-"""
 
 def print_trainable_parameters(model):
     """
@@ -57,8 +51,7 @@ def get_top_2_exercises_rankings(dpo_trainer):
     top_2_exercises_rankings = heapq.nsmallest(4, exercises_rankings, key=lambda x: x[1])
     return [exercise[0] for exercise in top_2_exercises_rankings]
 
-def train_model(model, tokenizer, train_dataset):
-
+def instantiate_trainer(model, tokenizer, train_dataset):
     peft_config = LoraConfig(
         r=16,
         lora_alpha=16,
@@ -73,14 +66,14 @@ def train_model(model, tokenizer, train_dataset):
         gradient_checkpointing=True,
         learning_rate=5e-5,
         lr_scheduler_type="cosine",
-        max_steps=50,
+        max_steps=100,
         save_strategy="no",
         logging_steps=1,
-        output_dir='dpo_gemma',
+        output_dir='dpo_mistral',
         optim="paged_adamw_32bit",
-        warmup_steps=100,
+        warmup_steps=50,
         bf16=True,
-        report_to="wandb",
+       # report_to="wandb",
         remove_unused_columns=False,
     )
     dpo_trainer = DPOTrainer(
@@ -94,8 +87,9 @@ def train_model(model, tokenizer, train_dataset):
         max_prompt_length=1024,
         max_length=1536,
     )
-    dpo_trainer.train()
+
     return dpo_trainer
+
 
 def get_train_dataset(dataset_path: str, tokenizer):
     ds = load_dataset('json', data_files=dataset_path, split="train")
@@ -133,35 +127,49 @@ def load_model(model_path: str):
         tokenizer.chat_template = "{% for message in messages %}{{message['role'] + ': ' + message['content'] + '\n\n'}}{% endfor %}{{ eos_token }}"
     return model, tokenizer
 
-def fine_tune(model_name: str, model_path: str, dataset_path: str):
+def fine_tune(model_name: str, model_path: str, dataset_path: str, conditions, example_question, example_answer):
     logger.info("Fine-tuning model %s with dataset %s", model_name, dataset_path)
     base_model_path = model_path
-    NUMBER_OF_EPOCHS = 2
-    current_epoch = NUMBER_OF_EPOCHS # Arbitrary number of epochs to run on 6 hours
-    while current_epoch > 0:
+    NUMBER_OF_EPOCHS = 15
+    current_epoch = 1 # Arbitrary number of epochs to run on 6 hours
+    model, tokenizer = load_model(model_path)
+    train_dataset = get_train_dataset(dataset_path, tokenizer)
+    dpo_trainer = instantiate_trainer(model, tokenizer, train_dataset)
+    while current_epoch <= NUMBER_OF_EPOCHS:
         logger.info("Starting epoch %s", current_epoch)
-        model, tokenizer = load_model(model_path)
-        train_dataset = get_train_dataset(dataset_path, tokenizer)
-        dpo_trainer = train_model(model, tokenizer, train_dataset)
+        dpo_trainer.train()
         top_2_exercises_rankings = get_top_2_exercises_rankings(dpo_trainer)
-        model_path = "./dpo_mistral"
-        save_model_locally(model, tokenizer, model_path)
-        del model, tokenizer, dpo_trainer
-        torch.cuda.empty_cache()
-        gc.collect()
-        dataset_path = create_similar_dataset(
-            top_2_exercises_rankings, 
-            "groq_llama3-70b-8192" ,
-            model_path, 
-            conditions,
-            example_question,
-            example_answer,
-            )
 
-        current_epoch -= 1
-        logger.info("Finished epoch %s", current_epoch)
+        if current_epoch % 5 == 0 or current_epoch == NUMBER_OF_EPOCHS:
+            logger.info(f"Saving model at epoch {current_epoch}")
+            model_path = "./dpo_mistral"
+            save_model_locally(model, tokenizer, model_path)
+            
+        if current_epoch != NUMBER_OF_EPOCHS:
+            logger.info("Starting dataset creating")
+            new_dataset_path = create_similar_dataset(
+                top_2_exercises_rankings, 
+                "groq_llama3-70b-8192" ,
+                model_path, 
+                conditions,
+                example_question,
+                example_answer,
+                dataset_path,
+                )
+
+            train_dataset = get_train_dataset(new_dataset_path, tokenizer)
+            with PartialState().local_main_process_first():
+                # tokenize the dataset
+                logger.info("Changing the train dataset")
+                dpo_trainer.train_dataset = train_dataset.map(dpo_trainer.tokenize_row, num_proc=None)
+
+        else:
+            logger.info("Last Epoch")
+
+        current_epoch += 1
+
     logger.info("Fine-tuning completed successfully")
-    del dpo_trainer, model
+    del dpo_trainer, model, tokenizer
     gc.collect()
     torch.cuda.empty_cache()
     base_model = AutoModelForCausalLM.from_pretrained(
@@ -170,7 +178,14 @@ def fine_tune(model_name: str, model_path: str, dataset_path: str):
         torch_dtype=torch.float16,
     )
     tokenizer = AutoTokenizer.from_pretrained(base_model_path)
-    model = PeftModel.from_pretrained(base_model, "./dpo_mistral")
+    model = PeftModel.from_pretrained(base_model, "dpo_mistral")
     model = model.merge_and_unload()
-    save_model_locally_and_push_to_hugging_face(model, tokenizer, "./dpo_mistral", "cvmistralparis/smol")
+    save_model_locally_and_push_to_hugging_face(model, tokenizer, "dpo_mistral", "cvmistralparis/smol")
     return True
+
+#if __name__ == '__main__':
+#    model = AutoModelForCausalLM.from_pretrained(
+#        "dpo_mistral"
+#    )
+#    tokenizer = AutoTokenizer.from_pretrained("dpo_mistral")
+#    save_model_locally_and_push_to_hugging_face(model, tokenizer, "dpo_mistral", "cvmistralparis/smol")

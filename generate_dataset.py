@@ -314,10 +314,16 @@ def generate_similar_dataset(
 
 
 def dump_dataset(
-    dataset: list[FinalDatasetExemple], oracle_model_id: str, student_model_id: str
+    dataset: list[FinalDatasetExemple], oracle_model_id: str, student_model_id: str, previous_path: Optional[str]=None
 ) -> str:
+
+    final_dataset_list = [{"id": i} | example.dict() for i, example in enumerate(dataset)]
+    if previous_path:
+        previous_dataset = json.loads(previous_path)
+        final_dataset_list.extend(previous_dataset)
+    
     final_dataset = json.dumps(
-        [{"id": i} | example.dict() for i, example in enumerate(dataset)], indent=4
+        final_dataset_list, indent=4
     )
     # Generate a hash of the final dataset
     dataset_hash = hashlib.sha256(final_dataset.encode()).hexdigest()
@@ -327,6 +333,7 @@ def dump_dataset(
     dataset_file_path = (
         f"datasets/{oracle_model_id}_{student_model_id}_{dataset_uuid}.json"
     )
+    
     with open(dataset_file_path, "w") as f:
         f.write(final_dataset)
         f.close()
@@ -359,6 +366,7 @@ def create_similar_dataset(
     conditions,
     example_question,
     example_answer,
+    previous_path,
 ):
     dataset = generate_similar_dataset(
         reference_questions,
@@ -368,7 +376,7 @@ def create_similar_dataset(
         example_question,
         example_answer,
     )
-    return dump_dataset(dataset, oracle_model_id, student_model_path)
+    return dump_dataset(dataset, oracle_model_id, student_model_path, previous_path)
 
 
 if __name__ == "__main__":

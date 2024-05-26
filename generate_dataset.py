@@ -26,9 +26,9 @@ for category in data.values():
         modified_model_name = "_".join(model_name.split("_")[1:])
         provider = model_name.split("_")[0]
         if provider == "groq":
-            models[model_name] = ChatGroq(model=modified_model_name)
+            models[model_name] = lambda _ :ChatGroq(model=modified_model_name)
         elif provider == "hf":
-            models[model_name] = HuggingFacePipeline.from_model_id(
+            models[model_name] = lambda _: HuggingFacePipeline.from_model_id(
                 model_id="mistralai/Mistral-7B-v0.1",
                 task="text-generation",
                 device=0,
@@ -237,8 +237,8 @@ def generate_dataset(
     example_question: str,
     example_answer: str,
 ) -> list[FinalDatasetExemple]:
-    oracle_model = models[oracle_model_id]
-    student_model = models[student_model_id]
+    oracle_model = models[oracle_model_id]()
+    student_model = models[student_model_id]()
     print("Start")
     print(student_model.invoke("Fait une fonction palidrome"))
     runnable = prompt | oracle_model.with_structured_output(schema=SubCategories)
@@ -275,7 +275,7 @@ def generate_similar_dataset(
     example_question: str,
     example_answer: str,
 ) -> list[FinalDatasetExemple]:
-    oracle_model = models[oracle_model_id]
+    oracle_model = models[oracle_model_id]()
     student_model = HuggingFacePipeline.from_model_id(
         model_id=student_model_path,
         task="text-generation",

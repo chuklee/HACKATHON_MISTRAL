@@ -34,7 +34,7 @@ def main():
                 "Function Implementation of DataStructre and Algorithms in Python",
             )
             oracle = data.get("oracle", "groq_llama3-70b-8192")
-            student_model = data.get("student_model", "groq_gemma-7b-it")
+            student_model = data.get("student_model", "hf_mistralai/Mistral-7B-v0.1")
             condition = data.get("condition", "")
             question_example = data.get("question_example", "")
             answer_example = data.get("answer_example", "")

@@ -49,7 +49,7 @@ prompt = ChatPromptTemplate.from_messages(
         ),
         (
             "human",
-            "Give 25 diversified subcategories of the following main theme:  {text}",
+            "Give 3 diversified subcategories of the following main theme:  {text}",
         ),
     ]
 )
@@ -59,7 +59,7 @@ prompt_data_generation = ChatPromptTemplate.from_messages(
         (
             "system",
             """You are a synthetic data generator. Your task is to generate a dataset based on a given theme and category.
-Create 12 questions/answer within the specified category, ensuring they gradually increase in complexity.""",
+Create 4 questions/answer within the specified category, ensuring they gradually increase in complexity.""",
         ),
         (
             "human",

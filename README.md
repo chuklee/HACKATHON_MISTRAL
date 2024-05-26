@@ -4,6 +4,12 @@
 
 **It opens the door to a new and fastest way to create agent specialized in a specific task.**
 
+## Sponsors
+- [Groq](https://www.groq.com/)
+- [Mistral](https://www.mistral.ai/)
+- [Nebius](https://nebrius.com/)
+- [Station F](https://stationf.co/)
+
 ## Key Features
 The core idea involves using a Large Language Model (e.g., Mistral Large) to generate a dataset tailored for fine-tuning a smaller model (e.g., Mistral Small). The small model is then trained using a Direct Preference Optimization (DPO) algorithm. Here's a breakdown of the process:
 1. **Initial Dataset Generation**: The large and small model generates a dataset.

@@ -39,6 +39,15 @@ Then, you can activate the environment with:
 conda activate smol
 ```
 
+Create a .env file in the root directory with the following content:
+
+```bash
+GROQ_API_KEY=
+FIREWORKS_API_KEY=
+MISTRAL_API_KEY=
+HUGGING_FACE_API_KEY=
+```
+
 You can then install the dependencies with the following command:
 
 ```bash

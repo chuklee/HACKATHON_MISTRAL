@@ -13,22 +13,24 @@ app = FastAPI(
     description="Smol inference server",
 )
 
+
 # add_routes(
-#     app,
-#     HuggingFacePipeline.from_model_id(
-#         model_id="./dpo_mistral",
-#         task="text-generation",
-#         device=0,
-#         model_kwargs={"do_sample": True},
-#         batch_size=4,
-#         pipeline_kwargs={
-#             "max_new_tokens": 512,
-#             "temperature": 0.2,
-#             "repetition_penalty": 1.1,
-#         },
-#     ),
-#     path="/smol",
+#         app,
+#         HuggingFacePipeline.from_model_id(
+#             model_id="./dpo_mistral",
+#             task="text-generation",
+#             device=0,
+#             model_kwargs={"do_sample": True},
+#             batch_size=4,
+#             pipeline_kwargs={
+#                 "max_new_tokens": 512,
+#                 "temperature": 0.2,
+#                 "repetition_penalty": 1.1,
+#             },
+#         ),
+#         path="/smol",
 # )
+
 
 add_routes(
     app,

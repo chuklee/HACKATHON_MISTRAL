@@ -14,10 +14,10 @@ st.write(f"**Oracle**: {oracle_input}")
 st.write(f"**Student**: {student_model_input}")
 
 
-model = RemoteRunnable("https://87be-195-242-24-207.ngrok-free.app/smol/")
+model = RemoteRunnable("https://6a22-195-242-24-207.ngrok-free.app/smol/")
 
 # Initialize chat history
-if "messages" not in st.session_state:
+if "messages_smol" not in st.session_state:
     st.session_state.messages_smol = []
 
 # Display chat messages from history on app rerun
@@ -39,7 +39,7 @@ if prompt:
             ("human", prompt)
         ]
     ).format_messages()
-    response = model.invoke(chat_prompt).content
+    response = model.invoke(chat_prompt)
     # Display assistant response in chat message container
     with st.chat_message("assistant"):
         st.markdown(response)

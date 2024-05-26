@@ -14,7 +14,7 @@ The core idea involves using a Large Language Model (e.g., Mistral Large) to gen
 
 4. **Iterative Fine-tuning**: The small model undergoes further fine-tuning with this new dataset.
 
-5. **Repetition**: Steps 4-5 are repeated until user-defined limits are met.
+5. **Repetition**: Steps 3-4 are repeated until user-defined limits are met.
 
 To summarize, the platform allows users to automatically create a small fine-tuned model from a pre-trained model on a specific task. The user can then use the fine-tuned model by a endpoint give by the platform.
 

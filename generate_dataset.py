@@ -7,8 +7,6 @@ from langchain_groq import ChatGroq
 from langchain_mistralai import ChatMistralAI
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.runnables import RunnableParallel
-import torch
-
 from langchain_core.pydantic_v1 import BaseModel, Field
 import json
 import concurrent.futures
@@ -23,7 +21,6 @@ with open(MODEL_PATH, "r", encoding="utf-8") as file:
     data = json.load(file)
 
 models = {}
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 for category in data.values():
     for model_name in category:
         modified_model_name = "_".join(model_name.split("_")[1:])
@@ -37,7 +34,11 @@ for category in data.values():
                 device=0,
                 model_kwargs={"do_sample": True},
                 batch_size=4,
-                pipeline_kwargs={"max_new_tokens": 512, "temperature": 0.2, "repetition_penalty": 1.1},
+                pipeline_kwargs={
+                    "max_new_tokens": 512,
+                    "temperature": 0.2,
+                    "repetition_penalty": 1.1,
+                },
             )
 
 prompt = ChatPromptTemplate.from_messages(
@@ -63,6 +64,25 @@ Create 12 questions/answer within the specified category, ensuring they graduall
         (
             "human",
             """Generate a synthetic dataset with the following theme: {text}. Please be sure to respect these {conditions}.
+---
+Question are as follow: {example_question}
+---
+Answer are as follow: {example_answer}
+""",
+        ),
+    ]
+)
+
+prompt_similar_data_generation = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """You are a synthetic data generator. Your task is to generate a dataset based on a given reference question.
+Create 3 questions/answer similar to the given reference questions, ensuring they gradually increase in complexity.""",
+        ),
+        (
+            "human",
+            """Generate a synthetic dataset similar to this following reference question: {reference_question}.Please be sure to respect these {conditions}.
 ---
 Question are as follow: {example_question}
 ---
@@ -111,7 +131,7 @@ def generate_rejected(prompts: list[str], student_model: BaseChatModel):
     # }
     # map_chain = RunnableParallel(**runnables)  # type: ignore
     # outputs = map_chain.invoke({})
-    # rejected = [output for output in outputs.values()] if isinstance(student_model, HuggingFacePipeline) else [output.content for output in outputs.values()] 
+    # rejected = [output for output in outputs.values()] if isinstance(student_model, HuggingFacePipeline) else [output.content for output in outputs.values()]
     rejected = student_model.batch(prompts)
     return rejected
     for prompt in prompts:
@@ -159,8 +179,54 @@ def generate_category(
             )
         print(f"Generated dataset for category: {category}")
     except Exception as e:
-
         print(f"Failed to generate dataset for category: {category}, Error: {e}")
+
+
+def generate_similar_question(
+    reference_question: str,
+    dataset: list[FinalDatasetExemple],
+    oracle_model: BaseChatModel,
+    student_model: BaseChatModel,
+    conditions: Optional[str],
+    example_question: Optional[str],
+    example_answer: Optional[str],
+):
+
+    runnable_dataset_generation = (
+        prompt_similar_data_generation
+        | oracle_model.with_structured_output(schema=DatasetExamples)
+    )
+    try:
+        print(
+            f"Generating Similar Dataset Question for reference question: {reference_question}"
+        )
+        generated_examples: DatasetExamples = runnable_dataset_generation.invoke(
+            {
+                "reference_question": reference_question,
+                "conditions": conditions,
+                "example_question": example_question,
+                "example_answer": example_answer,
+            }
+        )  # type: ignore
+        print(
+            f"Generating Similar Rejected for reference question: {reference_question}"
+        )
+        rejecteds = generate_rejected(
+            [example.question for example in generated_examples.examples], student_model
+        )
+        for example, rejected in zip(generated_examples.examples, rejecteds):
+            dataset.append(
+                FinalDatasetExemple(
+                    prompt=example.question,
+                    chosen=example.answer,
+                    rejected=rejected,  # type: ignore
+                )
+            )
+        print(f"Generated Simlar dataset for reference question: {reference_question}")
+    except Exception as e:
+        print(
+            f"Failed to generate similar dataset for reference question: {reference_question}, Error: {e}"
+        )
 
 
 def generate_dataset(
@@ -197,6 +263,35 @@ def generate_dataset(
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         executor.map(worker, categories.subcategories)
+
+    return dataset
+
+
+def generate_similar_dataset(
+    reference_questions: list[str],
+    oracle_model_id: str,
+    student_model_id: str,
+    conditions: str,
+    example_question: str,
+    example_answer: str,
+) -> list[FinalDatasetExemple]:
+    oracle_model = models[oracle_model_id]
+    student_model = models[student_model_id]
+    dataset: list[FinalDatasetExemple] = []
+
+    def worker(reference_question):
+        return generate_similar_question(
+            reference_question,
+            dataset,
+            oracle_model,
+            student_model,
+            conditions,
+            example_question,
+            example_answer,
+        )
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        executor.map(worker, reference_questions)
 
     return dataset
 
@@ -240,6 +335,25 @@ def create_dataset(
     return dump_dataset(dataset, oracle_model_id, student_model_id)
 
 
+def create_similar_dataset(
+    reference_questions: list[str],
+    oracle_model_id,
+    student_model_id,
+    conditions,
+    example_question,
+    example_answer,
+):
+    dataset = generate_similar_dataset(
+        reference_questions,
+        oracle_model_id,
+        student_model_id,
+        conditions,
+        example_question,
+        example_answer,
+    )
+    return dump_dataset(dataset, oracle_model_id, student_model_id)
+
+
 if __name__ == "__main__":
     theme = """Python Coding Interview Exercises on Data Structures and Algorithms"""
     conditions = 'Each question must present only the function signature formatted as follows: `def name_of_the_function(parameter_of_the_function):\\n"""docstring"""'
@@ -249,8 +363,21 @@ if __name__ == "__main__":
     example_answer = """
     for idx, elem in enumerate(numbers): for idx2, elem2 in enumerate(numbers): if idx != idx2: distance = abs(elem - elem2) if distance < threshold: return True return False
     """
-    path = create_dataset(
-        theme,
+    # path = create_dataset(
+    #     theme,
+    #     "groq_llama3-70b-8192",
+    #     "hf_mistralai/Mistral-7B-v0.1",
+    #     conditions,
+    #     example_question,
+    #     example_answer,
+    # )
+    # print(path)
+
+    path = create_similar_dataset(
+        [
+            'def max_fruits_in_baskets(fruits: List[str]) -> int: """ Given a string of fruits, find the maximum number of fruits that can be put in baskets where each basket can have at most two types of fruits. """',
+            'def longest_subarray_with_k_distinct_chars(s: str, k: int) -> int: """ Given a string and an integer k, find the length of the longest substring that contains at most k distinct characters. """',
+        ],
         "groq_llama3-70b-8192",
         "hf_mistralai/Mistral-7B-v0.1",
         conditions,

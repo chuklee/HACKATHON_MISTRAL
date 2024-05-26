@@ -17,7 +17,16 @@ import torch.nn as nn
 import gc
 from utils.save_model import save_model_locally, save_model_locally_and_push_to_hugging_face
 import heapq
+from generate_dataset import create_similar_dataset
 
+# Examples for generating dataset.
+conditions = 'Each question must present only the function signature formatted as follows: `def name_of_the_function(parameter_of_the_function):\\n"""docstring"""'
+example_question = '''
+from typing import List def has_close_elements(numbers: List[float], threshold: float) -> bool: """ Check if in given list of numbers, are any two numbers closer to each other than given threshold. """
+'''
+example_answer = """
+for idx, elem in enumerate(numbers): for idx2, elem2 in enumerate(numbers): if idx != idx2: distance = abs(elem - elem2) if distance < threshold: return True return False
+"""
 
 def print_trainable_parameters(model):
     """
@@ -45,7 +54,7 @@ def get_top_2_exercises_rankings(dpo_trainer):
         gc.collect()
 
 
-    top_2_exercises_rankings = heapq.nsmallest(2, exercises_rankings, key=lambda x: x[1])
+    top_2_exercises_rankings = heapq.nsmallest(4, exercises_rankings, key=lambda x: x[1])
     return [exercise[0] for exercise in top_2_exercises_rankings]
 
 def train_model(model, tokenizer, train_dataset):
@@ -59,12 +68,12 @@ def train_model(model, tokenizer, train_dataset):
         target_modules=['k_proj', 'gate_proj', 'v_proj', 'up_proj', 'q_proj', 'o_proj', 'down_proj']
     )
     training_args = TrainingArguments(
-        per_device_train_batch_size=4,
+        per_device_train_batch_size=2,
         gradient_accumulation_steps=4,
         gradient_checkpointing=True,
         learning_rate=5e-5,
         lr_scheduler_type="cosine",
-        max_steps=400,
+        max_steps=50,
         save_strategy="no",
         logging_steps=1,
         output_dir='dpo_gemma',
@@ -89,7 +98,6 @@ def train_model(model, tokenizer, train_dataset):
     return dpo_trainer
 
 def get_train_dataset(dataset_path: str, tokenizer):
-    dataset_path = 'dataset_3.json'
     ds = load_dataset('json', data_files=dataset_path, split="train")
 
     def transform_to_conversation(prompt, response):
@@ -113,20 +121,11 @@ def get_train_dataset(dataset_path: str, tokenizer):
 
 
 def load_model(model_path: str):
-    peft_config = LoraConfig(
-            r=16,
-            lora_alpha=16,
-            lora_dropout=0.05,
-            bias="none",
-            task_type="CAUSAL_LM",
-            target_modules=['k_proj', 'gate_proj', 'v_proj', 'up_proj', 'q_proj', 'o_proj', 'down_proj']
-        )
     model = AutoModelForCausalLM.from_pretrained(
             model_path, 
             torch_dtype=torch.float16,
             )
 
-    model_ref = None
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -137,7 +136,7 @@ def load_model(model_path: str):
 def fine_tune(model_name: str, model_path: str, dataset_path: str):
     logger.info("Fine-tuning model %s with dataset %s", model_name, dataset_path)
     base_model_path = model_path
-    NUMBER_OF_EPOCHS = 18
+    NUMBER_OF_EPOCHS = 2
     current_epoch = NUMBER_OF_EPOCHS # Arbitrary number of epochs to run on 6 hours
     while current_epoch > 0:
         logger.info("Starting epoch %s", current_epoch)
@@ -145,9 +144,20 @@ def fine_tune(model_name: str, model_path: str, dataset_path: str):
         train_dataset = get_train_dataset(dataset_path, tokenizer)
         dpo_trainer = train_model(model, tokenizer, train_dataset)
         top_2_exercises_rankings = get_top_2_exercises_rankings(dpo_trainer)
-        save_model_locally(model, tokenizer, "./dpo_mistral")
-        #TODO Retrive the new dataset_path with the top 2 exercises
         model_path = "./dpo_mistral"
+        save_model_locally(model, tokenizer, model_path)
+        del model, tokenizer, dpo_trainer
+        torch.cuda.empty_cache()
+        gc.collect()
+        dataset_path = create_similar_dataset(
+            top_2_exercises_rankings, 
+            "groq_llama3-70b-8192" ,
+            model_path, 
+            conditions,
+            example_question,
+            example_answer,
+            )
+
         current_epoch -= 1
         logger.info("Finished epoch %s", current_epoch)
     logger.info("Fine-tuning completed successfully")

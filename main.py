@@ -49,7 +49,6 @@ def main():
                 error_message = f"Student model {student_model} not found"
                 logging.error(error_message)
                 return jsonify(error=error_message), 400
-
             dataset_path = create_dataset(theme, oracle, student_model, condition, question_example, answer_example)
             logging.info("Dataset created successfully at %s", dataset_path)
             fine_tune(student_model, "mistralai/Mistral-7B-v0.1", dataset_path)

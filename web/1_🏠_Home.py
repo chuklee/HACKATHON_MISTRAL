@@ -27,7 +27,7 @@ if st.session_state["show_api_gestion"]:
         GROQ_API_KEY= st.text_input("GROQ API Key")  
         FIREWORKS_API_KEY = st.text_input("FIREWORKS API Key")
         MISTRAL_API_KEY = st.text_input("MISTRAL API Key")
-        HUGGING_FACE_API_KEY = st.text_input("MISTRAL API Key")
+        HUGGING_FACE_API_KEY = st.text_input("Hugging Face API Key")
         oracles, students = load_models()
         button_submit_key = st.button("Submit API Keys 🔑")
         if button_submit_key:
